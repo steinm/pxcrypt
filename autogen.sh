@@ -15,6 +15,7 @@ for i in config.guess config.sub missing install-sh mkinstalldirs ; do
 	chmod 755 ${i}
 done
 
+libtoolize --force --copy
 intltoolize --force --copy
 aclocal
 autoheader
