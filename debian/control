@@ -10,4 +10,4 @@ Architecture: any
 Depends: ${shlibs:Depends}
 Description: decrypts and encrypts paradox files
  pxcrypt can decrypt and encrypt various Paradox files with minimum
- modifications to the file content.
+ modifications to the file header.
