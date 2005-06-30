@@ -42,7 +42,7 @@ void usage(char *progname) {
 	printf("\n");
 	printf(_("Copyright: Copyright (C) 2005 Uwe Steinmann <uwe@steinmann.cx>"));
 	printf("\n\n");
-	printf(_("%s reads a paradox file and outputs information about the file\nor dumps the content in CSV, HTML, SQL or sqlite format."), progname);
+	printf(_("%s decrypts or encrypts a paradox file."), progname);
 	printf("\n\n");
 	printf(_("Usage: %s [OPTIONS] FILE"), progname);
 	printf("\n\n");
@@ -61,16 +61,20 @@ void usage(char *progname) {
 	}
 #endif
 	printf("\n");
-	printf(_("  --mode=MODE         set operation mode (encrypt, decrypt)."));
-	printf("\n");
-	printf(_("  --password=WORD     set password for encyption."));
-	printf("\n");
+	printf(_("  -o, --output-file=FILE output data into file instead of stdout."));
+	printf("\n\n");
 	printf(_("Options to select mode:"));
 	printf("\n");
-	printf(_("  -o, --output-file=FILE output data into file instead of stdout."));
+	printf(_("  --mode=MODE         set operation mode (encrypt, decrypt)."));
+	printf("\n");
+	printf(_("  --encrypt           encrypt file."));
+	printf("\n");
+	printf(_("  --decrypt           decrypt file."));
 
 	printf("\n\n");
 	printf(_("Encryption/decryption options:"));
+	printf("\n");
+	printf(_("  --password=WORD     set password for encyption."));
 
 	printf("\n");
 	if(PX_is_bigendian())
@@ -131,6 +135,8 @@ int main(int argc, char *argv[]) {
 		int option_index = 0;
 		static struct option long_options[] = {
 			{"verbose", 0, 0, 'v'},
+			{"encrypt", 0, 0, 'e'},
+			{"decrypt", 0, 0, 'd'},
 			{"output-file", 1, 0, 'o'},
 			{"password", 1, 0, 'p'},
 			{"help", 0, 0, 'h'},
@@ -157,6 +163,12 @@ int main(int argc, char *argv[]) {
 			case 11:
 				fprintf(stdout, "%s\n", VERSION);
 				exit(0);
+				break;
+			case 'd':
+				decrypt = 1;
+				break;
+			case 'e':
+				encrypt = 1;
 				break;
 			case 'o':
 				outputfile = strdup(optarg);
@@ -363,13 +375,95 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 		}
-		fclose(outfp);
-		PX_close(pxdoc);
-			
 
 	} else if(decrypt) {
-		
+		float number;
+		long headersize, blocksize;
+		long encryption;
+		int blockcount, blockno;
+		char *block, *header;
+		int ret;
+		if(!pxh->px_encryption) {
+			fprintf(stderr, _("Input file is not encrypted."));
+			fprintf(stderr, "\n");
+			PX_close(pxdoc);
+			fclose(outfp);
+			exit(1);
+		}
+		encryption = pxh->px_encryption;
+
+		PX_get_value(pxdoc, "headersize", &number);
+		headersize = (int) number;
+		if((header = (char *) pxdoc->malloc(pxdoc, headersize, _("Could not allocate memory for header of input file."))) == NULL) {
+			PX_close(pxdoc);
+			fclose(outfp);
+			exit(1);
+		}
+		if(pxdoc->seek(pxdoc, pxdoc->px_stream, 0, SEEK_SET) < 0) {
+			fprintf(stderr, _("Could not seek start of input file."));
+			fprintf(stderr, "\n");
+			pxdoc->free(pxdoc, header);
+			PX_close(pxdoc);
+			fclose(outfp);
+			exit(1);
+		}
+		if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, headersize, header)) < 0) {
+			fprintf(stderr, _("Could not read header of input file."));
+			fprintf(stderr, "\n");
+			pxdoc->free(pxdoc, header);
+			PX_close(pxdoc);
+			fclose(outfp);
+			exit(1);
+		}
+		put_long_le((char *)&header[0x25], 0);
+		put_long_le((char *)&header[0x5C], 0);
+
+		if(headersize != fwrite(header, 1, headersize, outfp)) {
+			fprintf(stderr, _("Could not write header to output file."));
+			fprintf(stderr, "\n");
+			pxdoc->free(pxdoc, header);
+			PX_close(pxdoc);
+			fclose(outfp);
+			exit(1);
+		}
+		pxdoc->free(pxdoc, header);
+
+		PX_get_value(pxdoc, "maxtablesize", &number);
+		blocksize = (int) number * 0x400;
+		if((block = (char *) pxdoc->malloc(pxdoc, blocksize, _("Could not allocate memory for block of input file."))) == NULL) {
+			PX_close(pxdoc);
+			fclose(outfp);
+			exit(1);
+		}
+		PX_get_value(pxdoc, "numblocks", &number);
+		blockcount = (int) number;
+		blockcount = pxh->px_fileblocks;
+		fprintf(stderr, "file has %d blocks\n", blockcount);
+		for(blockno=1; blockno<=blockcount; blockno++) {
+			fprintf(stderr, "Reading block %d\n", blockno);
+			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
+				fprintf(stderr, _("Could not block of input file."));
+				fprintf(stderr, "\n");
+				pxdoc->free(pxdoc, header);
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			fprintf(stderr, "Writing block %d\n", blockno);
+			px_decrypt_db_block(block, block, encryption, blocksize, blockno);
+			if(blocksize != fwrite(block, 1, blocksize, outfp)) {
+				fprintf(stderr, _("Could not write block to output file."));
+				fprintf(stderr, "\n");
+				pxdoc->free(pxdoc, header);
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+		}
 	}
+
+	fclose(outfp);
+	PX_close(pxdoc);
 	/* }}} */
 
 	/* Free resources and close files {{{
