@@ -355,9 +355,8 @@ int main(int argc, char *argv[]) {
 		blockcount = pxh->px_fileblocks;
 		fprintf(stderr, "file has %d blocks\n", blockcount);
 		for(blockno=1; blockno<=blockcount; blockno++) {
-			fprintf(stderr, "Reading block %d\n", blockno);
 			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
-				fprintf(stderr, _("Could not block of input file."));
+				fprintf(stderr, _("Could not read block from input file."));
 				fprintf(stderr, "\n");
 				pxdoc->free(pxdoc, header);
 				PX_close(pxdoc);
@@ -442,7 +441,7 @@ int main(int argc, char *argv[]) {
 		for(blockno=1; blockno<=blockcount; blockno++) {
 			fprintf(stderr, "Reading block %d\n", blockno);
 			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
-				fprintf(stderr, _("Could not block of input file."));
+				fprintf(stderr, _("Could not read block from input file."));
 				fprintf(stderr, "\n");
 				pxdoc->free(pxdoc, header);
 				PX_close(pxdoc);
