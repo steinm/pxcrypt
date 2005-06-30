@@ -1,0 +1,11 @@
+What is pxcrypt ?
+----------------
+
+pxcrypt is a command line program to decrypt and encrypt paradox
+files. It does it without reading the data records and with minimum
+modification to the file header.
+
+For a more detailed documentation read the man page pxcrypt(1) and
+check the web site at http://pxlib.sourceforge.net.
+
+Uwe Steinmann <uwe@steinmann.cx>
