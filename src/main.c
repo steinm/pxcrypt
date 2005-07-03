@@ -67,9 +67,9 @@ void usage(char *progname) {
 	printf("\n");
 	printf(_("  --mode=MODE         set operation mode (encrypt, decrypt)."));
 	printf("\n");
-	printf(_("  --encrypt           encrypt file."));
+	printf(_("  -e, --encrypt       encrypt file."));
 	printf("\n");
-	printf(_("  --decrypt           decrypt file."));
+	printf(_("  -d, --decrypt       decrypt file."));
 
 	printf("\n\n");
 	printf(_("Encryption/decryption options:"));
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
 			{"version", 0, 0, 11},
 			{0, 0, 0, 0}
 		};
-		c = getopt_long (argc, argv, "icsxqvtf:b:r:p:o:n:h",
+		c = getopt_long (argc, argv, "vedhp:o:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -213,6 +213,13 @@ int main(int argc, char *argv[]) {
 	/* if none the output modes is selected then display info */
 	if(decrypt == 0 && encrypt == 0)
 		decrypt = 1;
+
+	if(encrypt && !password) {
+		fprintf(stderr, _("Encryption mode requires a password."));
+		fprintf(stderr, "\n");
+		usage(progname);
+		exit(1);
+	}
 
 	/* Create output file {{{
 	 */
@@ -353,7 +360,10 @@ int main(int argc, char *argv[]) {
 		PX_get_value(pxdoc, "numblocks", &number);
 		blockcount = (int) number;
 		blockcount = pxh->px_fileblocks;
-		fprintf(stderr, "file has %d blocks\n", blockcount);
+		if(verbose) {
+			fprintf(stderr, _("File has %d data blocks."), blockcount);
+			fprintf(stderr, "\n");
+		}
 		for(blockno=1; blockno<=blockcount; blockno++) {
 			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
 				fprintf(stderr, _("Could not read block from input file."));
@@ -363,7 +373,10 @@ int main(int argc, char *argv[]) {
 				fclose(outfp);
 				exit(1);
 			}
-			fprintf(stderr, "Writing block %d\n", blockno);
+			if(verbose) {
+				fprintf(stderr, "Writing block %d", blockno);
+				fprintf(stderr, "\n");
+			}
 			px_encrypt_db_block(block, block, encryption, blocksize, blockno);
 			if(blocksize != fwrite(block, 1, blocksize, outfp)) {
 				fprintf(stderr, _("Could not write block to output file."));
@@ -437,9 +450,11 @@ int main(int argc, char *argv[]) {
 		PX_get_value(pxdoc, "numblocks", &number);
 		blockcount = (int) number;
 		blockcount = pxh->px_fileblocks;
-		fprintf(stderr, "file has %d blocks\n", blockcount);
+		if(verbose) {
+			fprintf(stderr, _("File has %d data blocks."), blockcount);
+			fprintf(stderr, "\n");
+		}
 		for(blockno=1; blockno<=blockcount; blockno++) {
-			fprintf(stderr, "Reading block %d\n", blockno);
 			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
 				fprintf(stderr, _("Could not read block from input file."));
 				fprintf(stderr, "\n");
@@ -448,8 +463,7 @@ int main(int argc, char *argv[]) {
 				fclose(outfp);
 				exit(1);
 			}
-			fprintf(stderr, "Writing block %d\n", blockno);
-			px_decrypt_db_block(block, block, encryption, blocksize, blockno);
+			/* No need to decrypt, because pxdoc->read() has already done it. */
 			if(blocksize != fwrite(block, 1, blocksize, outfp)) {
 				fprintf(stderr, _("Could not write block to output file."));
 				fprintf(stderr, "\n");
