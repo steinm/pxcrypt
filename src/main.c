@@ -374,7 +374,7 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			if(verbose) {
-				fprintf(stderr, "Writing block %d", blockno);
+				fprintf(stderr, _("Writing block %d."), blockno);
 				fprintf(stderr, "\n");
 			}
 			px_encrypt_db_block(block, block, encryption, blocksize, blockno);
