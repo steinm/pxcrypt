@@ -78,11 +78,13 @@ manpage.1: manpage.sgml
     <para>This manual page documents the
       <command>&dhpackage;</command> command.</para>
 
-    <para>&dhpackage; decrypts and encrypts Paradox files. It does it in
+    <para>&dhpackage; decrypts and encrypts Paradox files based on the
+	    pxlib library. It does it in
 		  a rather unconventional but very effective way for maximum speed.
 			The header of the input file is - except for two fields - copied to
 			the output file. There should be hardly any problems reading the
-			output file with other programs.
+			output file with other programs, even in cases where the input file
+			cannot be propperly read by pxlib (e.g. when opened with pxview).
       </para>
   </refsect1>
   <refsect1>
@@ -148,6 +150,26 @@ manpage.1: manpage.sgml
 
 		<para>The none optional parameter FILE is the Paradox file which shall
 		 be decrypted or encrypted.</para>
+  </refsect1>
+  <refsect1>
+    <title>HOW IT WORKS</title>
+
+    <para>Paradox uses a very weak algorithmn for encryption and also stores
+		  the encryption key in the unencrypted header of the file. This makes
+			it trivial to decrypt any paradox file even without knowing the
+			password. The algorithmn is not public but can be easily reengineered
+			from a dll from the paradox software.</para>
+		<para>When encrypting a file, first a four byte checksum will be
+		  calculated from a password. The checksum is used as a key for
+			the encryption algorithmn and also stored in the header of the
+			file. When decrypting a file, it is sufficient to take the checksum
+			from the header and feed the decryption algorithmn with it. The password
+			isn't needed anymore. Other software may need the password for
+			authorization puposes. If you employ such a software without knowing
+			the password of your paradox file, you may use pxcrypt to reencrypt
+			the file. There is currently no way to guess a password from an
+			encrypted file, though it is probably not too difficult to
+			implement.</para>
   </refsect1>
   <refsect1>
     <title>SEE ALSO</title>
