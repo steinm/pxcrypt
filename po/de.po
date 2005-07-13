@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pxview 0.0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2005-07-03 11:11+0200\n"
+"POT-Creation-Date: 2005-07-13 08:05+0200\n"
 "PO-Revision-Date: 2003-03-05 08:51+0100\n"
 "Last-Translator: Uwe Steinmann <uwe@steinmann.cx>\n"
 "Language-Team: de <uwe@steinmann.cx>\n"
@@ -25,184 +25,194 @@ msgstr "Version: %s %s http://sourceforge.net/projects/pxlib"
 msgid "Copyright: Copyright (C) 2005 Uwe Steinmann <uwe@steinmann.cx>"
 msgstr "Copyright: Copyright (C) 2005 Uwe Steinmann <uwe@steinmann.cx>"
 
-#: ../src/main.c:45
+#: ../src/main.c:46
+#, c-format
+msgid "%s encrypts a paradox file."
+msgstr "%s verschlüsselt eine Paradox-Datei."
+
+#: ../src/main.c:48
+#, c-format
+msgid "%s decrypts a paradox file."
+msgstr "%s entschlüsselt eine Paradox-Datei."
+
+#: ../src/main.c:50
 #, c-format
 msgid "%s decrypts or encrypts a paradox file."
-msgstr "%s entschlüsselt oder verschlüsselt eine Paradox datei."
+msgstr "%s entschlüsselt oder verschlüsselt eine Paradox-Datei."
 
-#: ../src/main.c:47
+#: ../src/main.c:53
 #, c-format
 msgid "Usage: %s [OPTIONS] FILE"
 msgstr "Aufruf: %s [OPTION] DATEI"
 
-#: ../src/main.c:49
+#: ../src/main.c:55
 #, c-format
 msgid "General options:"
 msgstr "Allgemeine Optionen:"
 
-#: ../src/main.c:51
+#: ../src/main.c:57
 #, c-format
 msgid "  -h, --help          this usage information."
 msgstr "  -h, --help          diese Hilfe."
 
-#: ../src/main.c:53
+#: ../src/main.c:59
 #, c-format
 msgid "  --version           show version information."
 msgstr "  --version           zeige Programmversion."
 
-#: ../src/main.c:55
+#: ../src/main.c:61
 #, c-format
 msgid "  -v, --verbose       be more verbose."
 msgstr "  -v, --verbose       mehr Informationen anzeigen."
 
-#: ../src/main.c:59
+#: ../src/main.c:65
 #, c-format
 msgid "  --use-gsf           use gsf library to read input file."
 msgstr ""
 "  --use-gsf           benutze gsf-Bibliothek zum Lesen der Eingabedatei."
 
-#: ../src/main.c:64
+#: ../src/main.c:70
 #, c-format
 msgid "  -o, --output-file=FILE output data into file instead of stdout."
 msgstr "  -o, --output-file=DATEI schreibe Ausgabe in Datei statt nach stdout."
 
-#: ../src/main.c:66
+#: ../src/main.c:73
 #, c-format
 msgid "Options to select mode:"
 msgstr "Optionen, die den Modus betreffen:"
 
-#: ../src/main.c:68
+#: ../src/main.c:75
 #, c-format
 msgid "  --mode=MODE         set operation mode (encrypt, decrypt)."
 msgstr "  --mode=MODE         setze Modus (encrypt, decrypt)."
 
-#: ../src/main.c:70
+#: ../src/main.c:77
 #, c-format
 msgid "  -e, --encrypt       encrypt file."
 msgstr "  -e, --encrypt           verschlüssel Datei."
 
-#: ../src/main.c:72
+#: ../src/main.c:79
 #, c-format
 msgid "  -d, --decrypt       decrypt file."
 msgstr "  -d, --decrypt           entschlüssel Datei."
 
-#: ../src/main.c:75
+#: ../src/main.c:84
 #, c-format
-msgid "Encryption/decryption options:"
-msgstr "Optionen für die Ver/Entschlüsselung"
+msgid "Encryption options:"
+msgstr "Optionen für die Verschlüsselung"
 
-#: ../src/main.c:77
+#: ../src/main.c:86
 #, c-format
-msgid "  --password=WORD     set password for encyption."
+msgid "  --password=WORD     set password for encryption."
 msgstr "  --password=WORD     setze Passwort für Verschlüsselung."
 
-#: ../src/main.c:81
+#: ../src/main.c:91
 #, c-format
 msgid "libpx has been compiled for big endian architecture."
 msgstr "libpx wurde für Architekturen mit big endian übersetzt."
 
-#: ../src/main.c:83
+#: ../src/main.c:93
 #, c-format
 msgid "libpx has been compiled for little endian architecture."
 msgstr "libpx wurde für Architekturen mit little endian übersetzt."
 
-#: ../src/main.c:85
+#: ../src/main.c:95
 #, c-format
 msgid "libpx has gsf support: %s"
 msgstr "libpx hat Unterstützung für die gsf-Bibliothek: %s"
 
-#: ../src/main.c:85
+#: ../src/main.c:95
 msgid "Yes"
 msgstr "Ja"
 
-#: ../src/main.c:85
+#: ../src/main.c:95
 msgid "No"
 msgstr "Nein"
 
-#: ../src/main.c:87
+#: ../src/main.c:97
 #, c-format
 msgid "libpx has version: %d.%d.%d"
 msgstr "libpx ist Version: %d.%d.%d"
 
-#: ../src/main.c:194
+#: ../src/main.c:208
 #, c-format
 msgid "You must at least specify an input file."
 msgstr "Sie müssen mindestes eine Eingabedatei angegeben."
 
-#: ../src/main.c:218
+#: ../src/main.c:232
 #, c-format
 msgid "Encryption mode requires a password."
 msgstr "Verschlüsselungsmodus erfordert Angabe eines Passworts."
 
-#: ../src/main.c:231
+#: ../src/main.c:245
 #, c-format
 msgid "Could not open output file."
-msgstr "Konnte Ausgabedate nicht öffnen."
+msgstr "Konnte Ausgabedatei nicht öffnen."
 
-#: ../src/main.c:245
+#: ../src/main.c:259
 #, c-format
 msgid "Could not create new paradox instance."
 msgstr "Konnte eine neue Paradox-Instanz nicht anlegen."
 
-#: ../src/main.c:264
+#: ../src/main.c:278
 #, c-format
 msgid "Could not open gsf input file."
 msgstr "Konnte Eingabedatei mit gsf-Bibliothek nicht öffnen."
 
-#: ../src/main.c:273 ../src/main.c:280
+#: ../src/main.c:287 ../src/main.c:294
 #, c-format
 msgid "Could not open input file."
 msgstr "Sie müssen mindestes eine Eingabedatei angegeben."
 
-#: ../src/main.c:309
+#: ../src/main.c:323
 #, c-format
 msgid "Input file is already encrypted."
 msgstr "Eingabedatei ist bereits verschlüsselt."
 
-#: ../src/main.c:319 ../src/main.c:409
+#: ../src/main.c:333 ../src/main.c:423
 msgid "Could not allocate memory for header of input file."
 msgstr "Konnte Speicher für Kopf der Eingabedatei nicht allozieren."
 
-#: ../src/main.c:325 ../src/main.c:415
+#: ../src/main.c:339 ../src/main.c:429
 #, c-format
 msgid "Could not seek start of input file."
 msgstr "Konnte nicht an den Anfang der Eingabedatei springen."
 
-#: ../src/main.c:333 ../src/main.c:423
+#: ../src/main.c:347 ../src/main.c:437
 #, c-format
 msgid "Could not read header of input file."
 msgstr "Konnte Kopf der Eingabedatei nicht lesen."
 
-#: ../src/main.c:344 ../src/main.c:434
+#: ../src/main.c:358 ../src/main.c:448
 #, c-format
 msgid "Could not write header to output file."
-msgstr "Konnte Kopf nicht in Ausgabedate schreiben."
+msgstr "Konnte Kopf nicht in Ausgabedatei schreiben."
 
-#: ../src/main.c:355 ../src/main.c:445
+#: ../src/main.c:369 ../src/main.c:459
 msgid "Could not allocate memory for block of input file."
 msgstr "Konnte Speicher für Datenblock der Eingabedatei nicht allozieren."
 
-#: ../src/main.c:364 ../src/main.c:454
+#: ../src/main.c:378 ../src/main.c:468
 #, c-format
 msgid "File has %d data blocks."
 msgstr "Datei hat %d Daten-blöcke."
 
-#: ../src/main.c:369 ../src/main.c:459
+#: ../src/main.c:383 ../src/main.c:473
 #, c-format
 msgid "Could not read block from input file."
 msgstr "Konnte Datenblock aus Eingabedatei nicht lesen."
 
-#: ../src/main.c:377
+#: ../src/main.c:391
 #, c-format
 msgid "Writing block %d."
 msgstr "Schreibe Datenblock %d."
 
-#: ../src/main.c:382 ../src/main.c:468
+#: ../src/main.c:396 ../src/main.c:482
 #, c-format
 msgid "Could not write block to output file."
-msgstr "Konnte Datenblock nicht in Ausgabedate schreiben."
+msgstr "Konnte Datenblock nicht in Ausgabedatei schreiben."
 
-#: ../src/main.c:399
+#: ../src/main.c:413 ../src/main.c:497
 #, c-format
 msgid "Input file is not encrypted."
 msgstr "Eingabedatei ist nicht verschlüsselt."
