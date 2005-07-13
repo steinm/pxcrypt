@@ -42,7 +42,13 @@ void usage(char *progname) {
 	printf("\n");
 	printf(_("Copyright: Copyright (C) 2005 Uwe Steinmann <uwe@steinmann.cx>"));
 	printf("\n\n");
-	printf(_("%s decrypts or encrypts a paradox file."), progname);
+	if(!strcmp(progname, "pxencrypt")) {
+		printf(_("%s encrypts a paradox file."), progname);
+	} else if(!strcmp(progname, "pxdecrypt")) {
+		printf(_("%s decrypts a paradox file."), progname);
+	} else {
+		printf(_("%s decrypts or encrypts a paradox file."), progname);
+	}
 	printf("\n\n");
 	printf(_("Usage: %s [OPTIONS] FILE"), progname);
 	printf("\n\n");
@@ -62,21 +68,25 @@ void usage(char *progname) {
 #endif
 	printf("\n");
 	printf(_("  -o, --output-file=FILE output data into file instead of stdout."));
-	printf("\n\n");
-	printf(_("Options to select mode:"));
-	printf("\n");
-	printf(_("  --mode=MODE         set operation mode (encrypt, decrypt)."));
-	printf("\n");
-	printf(_("  -e, --encrypt       encrypt file."));
-	printf("\n");
-	printf(_("  -d, --decrypt       decrypt file."));
+	if(!strcmp(progname, "pxcrypt")) {
+		printf("\n\n");
+		printf(_("Options to select mode:"));
+		printf("\n");
+		printf(_("  --mode=MODE         set operation mode (encrypt, decrypt)."));
+		printf("\n");
+		printf(_("  -e, --encrypt       encrypt file."));
+		printf("\n");
+		printf(_("  -d, --decrypt       decrypt file."));
+	}
+
+	if(strcmp(progname, "pxdecrypt")) {
+		printf("\n\n");
+		printf(_("Encryption options:"));
+		printf("\n");
+		printf(_("  --password=WORD     set password for encryption."));
+	}
 
 	printf("\n\n");
-	printf(_("Encryption/decryption options:"));
-	printf("\n");
-	printf(_("  --password=WORD     set password for encyption."));
-
-	printf("\n");
 	if(PX_is_bigendian())
 		printf(_("libpx has been compiled for big endian architecture."));
 	else
@@ -108,7 +118,7 @@ int main(int argc, char *argv[]) {
 	char *progname = NULL;
 	char *data;
 	int i, j, c; // general counters
-	int decrypt = 0, encrypt = 0;
+	int decrypt = 0, encrypt = 0, guess = 0;
 	int usegsf = 0;
 	int verbose = 0;
 	char *password = NULL;
@@ -137,6 +147,7 @@ int main(int argc, char *argv[]) {
 			{"verbose", 0, 0, 'v'},
 			{"encrypt", 0, 0, 'e'},
 			{"decrypt", 0, 0, 'd'},
+			{"guess", 0, 0, 'g'},
 			{"output-file", 1, 0, 'o'},
 			{"password", 1, 0, 'p'},
 			{"help", 0, 0, 'h'},
@@ -145,7 +156,7 @@ int main(int argc, char *argv[]) {
 			{"version", 0, 0, 11},
 			{0, 0, 0, 0}
 		};
-		c = getopt_long (argc, argv, "vedhp:o:",
+		c = getopt_long (argc, argv, "vedghp:o:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -169,6 +180,9 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'e':
 				encrypt = 1;
+				break;
+			case 'g':
+				guess = 1;
 				break;
 			case 'o':
 				outputfile = strdup(optarg);
@@ -211,7 +225,7 @@ int main(int argc, char *argv[]) {
 	/* }}} */
 
 	/* if none the output modes is selected then display info */
-	if(decrypt == 0 && encrypt == 0)
+	if(decrypt == 0 && encrypt == 0 && guess == 0)
 		decrypt = 1;
 
 	if(encrypt && !password) {
@@ -471,6 +485,48 @@ int main(int argc, char *argv[]) {
 				PX_close(pxdoc);
 				fclose(outfp);
 				exit(1);
+			}
+		}
+	} else if(guess) {
+#define FIRSTCHAR 48
+#define LASTCHAR 127
+		long encryption;
+		int i0, i1, i2, i3, i4, i5, i6, i7;
+		char password[9] = "        ";
+		if(!pxh->px_encryption) {
+			fprintf(stderr, _("Input file is not encrypted."));
+			fprintf(stderr, "\n");
+			PX_close(pxdoc);
+			fclose(outfp);
+			exit(1);
+		}
+		encryption = pxh->px_encryption;
+		password[8] = '\0';
+		for(i0=FIRSTCHAR; i0<=LASTCHAR; i0++) {
+			password[0] = (char) i0;
+			for(i1=FIRSTCHAR; i1<=LASTCHAR; i1++) {
+				password[1] = (char) i1;
+				for(i2=FIRSTCHAR; i2<=LASTCHAR; i2++) {
+					password[2] = (char) i2;
+					for(i3=FIRSTCHAR; i3<=LASTCHAR; i3++) {
+						password[3] = (char) i3;
+						for(i4=FIRSTCHAR; i4<=LASTCHAR; i4++) {
+							password[4] = (char) i4;
+							for(i5=FIRSTCHAR; i5<=LASTCHAR; i5++) {
+								password[5] = (char) i5;
+								for(i6=FIRSTCHAR; i6<=LASTCHAR; i6++) {
+									password[6] = (char) i6;
+									for(i7=FIRSTCHAR; i7<=LASTCHAR; i7++) {
+										password[7] = (char) i7;
+										if(encryption == px_passwd_checksum(password )) {
+											fprintf(stdout, "%s\n", password);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
