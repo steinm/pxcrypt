@@ -20,7 +20,7 @@ manpage.1: manpage.sgml
   <!ENTITY dhfirstname "<firstname>Uwe</firstname>">
   <!ENTITY dhsurname   "<surname>Steinmann</surname>">
   <!-- Please adjust the date whenever revising the manpage. -->
-  <!ENTITY dhdate      "<date>June 30, 2005</date>">
+  <!ENTITY dhdate      "<date>August 10, 2005</date>">
   <!-- SECTION should be 1-8, maybe w/ subsection other parameters are
        allowed: see man(7), man(1). -->
   <!ENTITY dhsection   "<manvolnum>1</manvolnum>">
@@ -68,6 +68,7 @@ manpage.1: manpage.sgml
 
       <arg><option>--mode=MODE <replaceable></replaceable></option></arg>
       <arg><option>--password=WORD <replaceable></replaceable></option></arg>
+      <arg><option>--database-file=FILE <replaceable></replaceable></option></arg>
       <arg><option>-o FILE | --output-file=FILE <replaceable></replaceable></option></arg>
       <arg>FILE </arg>
     </cmdsynopsis>
@@ -146,16 +147,27 @@ manpage.1: manpage.sgml
 					 but only for encryption.</para>
         </listitem>
       </varlistentry>
+      <varlistentry>
+        <term><option>--database-file=FILE</option>
+        </term>
+        <listitem>
+          <para>Sets the database file associated with the blob file, which
+					 is going to be encrypted or decrypted. See the section about
+					 decrypting and encrypting blob files.</para>
+        </listitem>
+      </varlistentry>
     </variablelist>
 
 		<para>The none optional parameter FILE is the Paradox file which shall
-		 be decrypted or encrypted.</para>
+		  be decrypted or encrypted. It can be either a .db file or a .mb file.
+		  Read the section about decrypting and encrypting blob files for
+		  further information.</para>
   </refsect1>
   <refsect1>
     <title>HOW IT WORKS</title>
 
     <para>Paradox uses a very weak algorithmn for encryption and also stores
-		  the encryption key in the unencrypted header of the file. This makes
+		  the encryption key in the unencrypted header of the .db file. This makes
 			it trivial to decrypt any paradox file even without knowing the
 			password. The algorithmn is not public but can be easily reengineered
 			from a dll from the paradox software.</para>
@@ -166,10 +178,37 @@ manpage.1: manpage.sgml
 			from the header and feed the decryption algorithmn with it. The password
 			isn't needed anymore. Other software may need the password for
 			authorization puposes. If you employ such a software without knowing
-			the password of your paradox file, you may use pxcrypt to reencrypt
+			the password of your paradox file, you may use &dhpackage; to reencrypt
 			the file. There is currently no way to guess a password from an
 			encrypted file, though it is probably not too difficult to
 			implement.</para>
+  </refsect1>
+  <refsect1>
+    <title>DECRYPTING AND ENCRYPTING BLOBS</title>
+
+    <para>Blob files (.mb) have a very simple structure with little
+		  information in the header. They cannot be decrypted or encrypted
+			without the associated .db file. A blob file is always
+			fully encrypted including the header and all the data blocks.
+			The encryption key is taken from the .db file.</para>
+		<para>&dhpackage; cannot decrypt or encrypt a blob file and database
+		  file in one pass. You will have to do it sequencially. If you want
+			to encypt a database, you will first have to encrypt the .db file
+			and afterwards the .mb file.</para>
+		<programlisting>
+pxcrypt -e --password=secret --output-file=test_encrypted.db test.db
+pxcrypt -e --database-file=test_encrypted.db --output-file=test_encypted.mb test.mb
+		</programlisting>
+		<para>Encyption of the blob file does not need a password, because
+		  the encryption key is taken from .db file.</para>
+		<para>Decryption of a database must be done in the opposite order.</para>
+		<programlisting>
+pxcrypt -d --database-file=test_encrypted.db --output-file=test.mb test_encrypted.mb
+pxcrypt -d --output-file=test.db test_encrypted.db
+		</programlisting>
+		<para>Keep in mind that decryption of a .mb files requires a still
+		  encrypted .db file, because of the encyption key which will be lost
+			once the .db file is decrypted.</para>
   </refsect1>
   <refsect1>
     <title>SEE ALSO</title>
