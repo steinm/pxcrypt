@@ -60,6 +60,8 @@ void usage(char *progname) {
 	printf("\n");
 	printf(_("  -v, --verbose       be more verbose."));
 	printf("\n");
+	printf(_("  --database-file=FILE .db file if en/decrypting .mb files."));
+	printf("\n");
 #ifdef HAVE_GSF
 	if(PX_has_gsf_support()) {
 		printf(_("  --use-gsf           use gsf library to read input file."));
@@ -124,6 +126,7 @@ int main(int argc, char *argv[]) {
 	char *password = NULL;
 	char *inputfile = NULL;
 	char *outputfile = NULL;
+	char *dbfile = NULL;
 	FILE *outfp = NULL;
 
 #ifdef MEMORY_DEBUGGING
@@ -149,6 +152,7 @@ int main(int argc, char *argv[]) {
 			{"decrypt", 0, 0, 'd'},
 			{"guess", 0, 0, 'g'},
 			{"output-file", 1, 0, 'o'},
+			{"database-file", 1, 0, 1},
 			{"password", 1, 0, 'p'},
 			{"help", 0, 0, 'h'},
 			{"mode", 1, 0, 4},
@@ -161,6 +165,9 @@ int main(int argc, char *argv[]) {
 		if (c == -1)
 			break;
 		switch (c) {
+			case 1:
+				dbfile = strdup(optarg);
+				break;
 			case 4:
 				if(!strcmp(optarg, "decrypt")) {
 					decrypt = 1;
@@ -228,7 +235,7 @@ int main(int argc, char *argv[]) {
 	if(decrypt == 0 && encrypt == 0 && guess == 0)
 		decrypt = 1;
 
-	if(encrypt && !password) {
+	if(encrypt && !password && !dbfile) {
 		fprintf(stderr, _("Encryption mode requires a password."));
 		fprintf(stderr, "\n");
 		usage(progname);
@@ -261,17 +268,20 @@ int main(int argc, char *argv[]) {
 		exit(1);
 	}
 
+	if(!dbfile)
+		dbfile = inputfile;
+
 #ifdef HAVE_GSF
 	if(PX_has_gsf_support() && usegsf) {
 		GsfInput *input = NULL;
 		GsfInputStdio  *in_stdio;
 		GsfInputMemory *in_mem;
 		GError *gerr = NULL;
-		fprintf(stderr, "Inputfile:  %s\n", inputfile);
+		fprintf(stderr, "Inputfile:  %s\n", dbfile);
 		gsf_init ();
-		in_mem = gsf_input_mmap_new (inputfile, NULL);
+		in_mem = gsf_input_mmap_new (dbfile, NULL);
 		if (in_mem == NULL) {
-			in_stdio = gsf_input_stdio_new(inputfile, &gerr);
+			in_stdio = gsf_input_stdio_new(dbfile, &gerr);
 			if(in_stdio != NULL)
 				input = GSF_INPUT (in_stdio);
 			else {
@@ -290,7 +300,7 @@ int main(int argc, char *argv[]) {
 		}
 	} else {
 #endif
-		if(0 > PX_open_file(pxdoc, inputfile)) {
+		if(0 > PX_open_file(pxdoc, dbfile)) {
 			fprintf(stderr, _("Could not open input file."));
 			fprintf(stderr, "\n");
 			exit(1);
@@ -299,8 +309,8 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-	/* Below this pointer inputfile isn't used anymore. */
-	free(inputfile);
+	/* Below this pointer dbfile isn't used anymore. */
+	free(dbfile);
 	/* }}} */
 
 	/* Set various variables with values from the header. */
@@ -319,89 +329,144 @@ int main(int argc, char *argv[]) {
 		int blockcount, blockno;
 		char *block, *header;
 		int ret;
-		if(pxh->px_encryption) {
-			fprintf(stderr, _("Input file is already encrypted."));
-			fprintf(stderr, "\n");
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		encryption = px_passwd_checksum(password);
-		fprintf(stderr, "encryption is 0x%X\n", encryption);
-		PX_get_value(pxdoc, "headersize", &number);
-		headersize = (int) number;
-		if((header = (char *) pxdoc->malloc(pxdoc, headersize, _("Could not allocate memory for header of input file."))) == NULL) {
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		if(pxdoc->seek(pxdoc, pxdoc->px_stream, 0, SEEK_SET) < 0) {
-			fprintf(stderr, _("Could not seek start of input file."));
-			fprintf(stderr, "\n");
-			pxdoc->free(pxdoc, header);
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, headersize, header)) < 0) {
-			fprintf(stderr, _("Could not read header of input file."));
-			fprintf(stderr, "\n");
-			pxdoc->free(pxdoc, header);
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		put_long_le((char *)&header[0x25], encryption);
-		put_long_le((char *)&header[0x5C], encryption);
-
-		if(headersize != fwrite(header, 1, headersize, outfp)) {
-			fprintf(stderr, _("Could not write header to output file."));
-			fprintf(stderr, "\n");
-			pxdoc->free(pxdoc, header);
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		pxdoc->free(pxdoc, header);
-
-		PX_get_value(pxdoc, "maxtablesize", &number);
-		blocksize = (int) number * 0x400;
-		if((block = (char *) pxdoc->malloc(pxdoc, blocksize, _("Could not allocate memory for block of input file."))) == NULL) {
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		PX_get_value(pxdoc, "numblocks", &number);
-		blockcount = (int) number;
-		blockcount = pxh->px_fileblocks;
-		if(verbose) {
-			fprintf(stderr, _("File has %d data blocks."), blockcount);
-			fprintf(stderr, "\n");
-		}
-		for(blockno=1; blockno<=blockcount; blockno++) {
-			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
-				fprintf(stderr, _("Could not read block from input file."));
+		/* check if input file is a .db or .mb file */
+		if(dbfile == inputfile) {
+			if(pxh->px_encryption) {
+				fprintf(stderr, _("Input file is already encrypted."));
+				fprintf(stderr, "\n");
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			encryption = px_passwd_checksum(password);
+			PX_get_value(pxdoc, "headersize", &number);
+			headersize = (int) number;
+			if((header = (char *) pxdoc->malloc(pxdoc, headersize, _("Could not allocate memory for header of input file."))) == NULL) {
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			if(pxdoc->seek(pxdoc, pxdoc->px_stream, 0, SEEK_SET) < 0) {
+				fprintf(stderr, _("Could not seek start of input file."));
 				fprintf(stderr, "\n");
 				pxdoc->free(pxdoc, header);
 				PX_close(pxdoc);
 				fclose(outfp);
 				exit(1);
 			}
+			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, headersize, header)) < 0) {
+				fprintf(stderr, _("Could not read header of input file."));
+				fprintf(stderr, "\n");
+				pxdoc->free(pxdoc, header);
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			put_long_le((char *)&header[0x25], encryption);
+			put_long_le((char *)&header[0x5C], encryption);
+
+			if(headersize != fwrite(header, 1, headersize, outfp)) {
+				fprintf(stderr, _("Could not write header to output file."));
+				fprintf(stderr, "\n");
+				pxdoc->free(pxdoc, header);
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			pxdoc->free(pxdoc, header);
+
+			PX_get_value(pxdoc, "maxtablesize", &number);
+			blocksize = (int) number * 0x400;
+			if((block = (char *) pxdoc->malloc(pxdoc, blocksize, _("Could not allocate memory for block of input file."))) == NULL) {
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			PX_get_value(pxdoc, "numblocks", &number);
+			blockcount = (int) number;
+			blockcount = pxh->px_fileblocks;
 			if(verbose) {
-				fprintf(stderr, _("Writing block %d."), blockno);
+				fprintf(stderr, _("File has %d data blocks."), blockcount);
 				fprintf(stderr, "\n");
 			}
-			px_encrypt_db_block(block, block, encryption, blocksize, blockno);
-			if(blocksize != fwrite(block, 1, blocksize, outfp)) {
-				fprintf(stderr, _("Could not write block to output file."));
+			for(blockno=1; blockno<=blockcount; blockno++) {
+				if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
+					fprintf(stderr, _("Could not read block from input file."));
+					fprintf(stderr, "\n");
+					pxdoc->free(pxdoc, header);
+					PX_close(pxdoc);
+					fclose(outfp);
+					exit(1);
+				}
+				if(verbose) {
+					fprintf(stderr, _("Writing block %d."), blockno);
+					fprintf(stderr, "\n");
+				}
+				px_encrypt_db_block(block, block, encryption, blocksize, blockno);
+				if(blocksize != fwrite(block, 1, blocksize, outfp)) {
+					fprintf(stderr, _("Could not write block to output file."));
+					fprintf(stderr, "\n");
+					pxdoc->free(pxdoc, header);
+					PX_close(pxdoc);
+					fclose(outfp);
+					exit(1);
+				}
+			}
+		} else {
+			if(!pxh->px_encryption) {
+				fprintf(stderr, _("Database file is not encrypted."));
 				fprintf(stderr, "\n");
-				pxdoc->free(pxdoc, header);
 				PX_close(pxdoc);
 				fclose(outfp);
 				exit(1);
 			}
+			/* Set encryption of .db file to 0, because the the .mb file
+			 * needs to be read without decryption.
+			 */
+			encryption = pxh->px_encryption;
+			pxh->px_encryption = 0;
+			if(NULL == (pxblob = PX_new_blob(pxdoc))) {
+				fprintf(stderr, _("Could not create new blob file object."));
+				fprintf(stderr, "\n");
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			if(0 > PX_open_blob_file(pxblob, inputfile)) {
+				fprintf(stderr, _("Could not open blob file."));
+				fprintf(stderr, "\n");
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			blocksize = 0x1000;
+			if((block = (char *) pxdoc->malloc(pxdoc, blocksize, _("Could not allocate memory for block of input file."))) == NULL) {
+				PX_close(pxdoc);
+				PX_close_blob(pxblob);
+				fclose(outfp);
+				exit(1);
+			}
+			if(pxblob->seek(pxblob, pxblob->mb_stream, 0, SEEK_SET) < 0) {
+				fprintf(stderr, _("Could not fseek start of blob file."));
+				fprintf(stderr, "\n");
+				PX_close(pxdoc);
+				PX_close_blob(pxblob);
+				fclose(outfp);
+				exit(1);
+			}
+			while(pxblob->read(pxblob, pxblob->mb_stream, blocksize, block) > 0) {
+				px_encrypt_mb_block(block, block, encryption, blocksize);
+				if(blocksize != fwrite(block, 1, blocksize, outfp)) {
+					fprintf(stderr, _("Could not write block to output file."));
+					fprintf(stderr, "\n");
+					PX_close(pxdoc);
+					PX_close_blob(pxblob);
+					fclose(outfp);
+					exit(1);
+				}
+			}
+			PX_close_blob(pxblob);
 		}
-
 	} else if(decrypt) {
 		float number;
 		long headersize, blocksize;
@@ -418,74 +483,124 @@ int main(int argc, char *argv[]) {
 		}
 		encryption = pxh->px_encryption;
 
-		PX_get_value(pxdoc, "headersize", &number);
-		headersize = (int) number;
-		if((header = (char *) pxdoc->malloc(pxdoc, headersize, _("Could not allocate memory for header of input file."))) == NULL) {
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		if(pxdoc->seek(pxdoc, pxdoc->px_stream, 0, SEEK_SET) < 0) {
-			fprintf(stderr, _("Could not seek start of input file."));
-			fprintf(stderr, "\n");
-			pxdoc->free(pxdoc, header);
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, headersize, header)) < 0) {
-			fprintf(stderr, _("Could not read header of input file."));
-			fprintf(stderr, "\n");
-			pxdoc->free(pxdoc, header);
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		put_long_le((char *)&header[0x25], 0);
-		put_long_le((char *)&header[0x5C], 0);
-
-		if(headersize != fwrite(header, 1, headersize, outfp)) {
-			fprintf(stderr, _("Could not write header to output file."));
-			fprintf(stderr, "\n");
-			pxdoc->free(pxdoc, header);
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		pxdoc->free(pxdoc, header);
-
-		PX_get_value(pxdoc, "maxtablesize", &number);
-		blocksize = (int) number * 0x400;
-		if((block = (char *) pxdoc->malloc(pxdoc, blocksize, _("Could not allocate memory for block of input file."))) == NULL) {
-			PX_close(pxdoc);
-			fclose(outfp);
-			exit(1);
-		}
-		PX_get_value(pxdoc, "numblocks", &number);
-		blockcount = (int) number;
-		blockcount = pxh->px_fileblocks;
-		if(verbose) {
-			fprintf(stderr, _("File has %d data blocks."), blockcount);
-			fprintf(stderr, "\n");
-		}
-		for(blockno=1; blockno<=blockcount; blockno++) {
-			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
-				fprintf(stderr, _("Could not read block from input file."));
+		/* check if input file is a .db or .mb file */
+		if(dbfile == inputfile) {
+			PX_get_value(pxdoc, "headersize", &number);
+			headersize = (int) number;
+			if((header = (char *) pxdoc->malloc(pxdoc, headersize, _("Could not allocate memory for header of input file."))) == NULL) {
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			if(pxdoc->seek(pxdoc, pxdoc->px_stream, 0, SEEK_SET) < 0) {
+				fprintf(stderr, _("Could not seek start of input file."));
 				fprintf(stderr, "\n");
 				pxdoc->free(pxdoc, header);
 				PX_close(pxdoc);
 				fclose(outfp);
 				exit(1);
 			}
-			/* No need to decrypt, because pxdoc->read() has already done it. */
-			if(blocksize != fwrite(block, 1, blocksize, outfp)) {
-				fprintf(stderr, _("Could not write block to output file."));
+			if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, headersize, header)) < 0) {
+				fprintf(stderr, _("Could not read header of input file."));
 				fprintf(stderr, "\n");
 				pxdoc->free(pxdoc, header);
 				PX_close(pxdoc);
 				fclose(outfp);
 				exit(1);
 			}
+			put_long_le((char *)&header[0x25], 0);
+			put_long_le((char *)&header[0x5C], 0);
+
+			if(headersize != fwrite(header, 1, headersize, outfp)) {
+				fprintf(stderr, _("Could not write header to output file."));
+				fprintf(stderr, "\n");
+				pxdoc->free(pxdoc, header);
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			pxdoc->free(pxdoc, header);
+
+			PX_get_value(pxdoc, "maxtablesize", &number);
+			blocksize = (int) number * 0x400;
+			if((block = (char *) pxdoc->malloc(pxdoc, blocksize, _("Could not allocate memory for block of input file."))) == NULL) {
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			PX_get_value(pxdoc, "numblocks", &number);
+			blockcount = (int) number;
+			blockcount = pxh->px_fileblocks;
+			if(verbose) {
+				fprintf(stderr, _("File has %d data blocks."), blockcount);
+				fprintf(stderr, "\n");
+			}
+			for(blockno=1; blockno<=blockcount; blockno++) {
+				if((ret = pxdoc->read(pxdoc, pxdoc->px_stream, blocksize, block)) < 0) {
+					fprintf(stderr, _("Could not read block from input file."));
+					fprintf(stderr, "\n");
+					pxdoc->free(pxdoc, header);
+					PX_close(pxdoc);
+					fclose(outfp);
+					exit(1);
+				}
+				/* No need to decrypt, because pxdoc->read() has already done it. */
+				if(blocksize != fwrite(block, 1, blocksize, outfp)) {
+					fprintf(stderr, _("Could not write block to output file."));
+					fprintf(stderr, "\n");
+					pxdoc->free(pxdoc, header);
+					PX_close(pxdoc);
+					fclose(outfp);
+					exit(1);
+				}
+			}
+		} else {
+			int ret;
+			if(NULL == (pxblob = PX_new_blob(pxdoc))) {
+				fprintf(stderr, _("Could not create new blob file object."));
+				fprintf(stderr, "\n");
+				pxdoc->free(pxdoc, header);
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			if(0 > PX_open_blob_file(pxblob, inputfile)) {
+				fprintf(stderr, _("Could not open blob file."));
+				fprintf(stderr, "\n");
+				pxdoc->free(pxdoc, header);
+				PX_close(pxdoc);
+				fclose(outfp);
+				exit(1);
+			}
+			blocksize = 0x1000;
+			if((block = (char *) pxdoc->malloc(pxdoc, blocksize, _("Could not allocate memory for block of input file."))) == NULL) {
+				PX_close(pxdoc);
+				PX_close_blob(pxblob);
+				fclose(outfp);
+				exit(1);
+			}
+			if(pxblob->seek(pxblob, pxblob->mb_stream, 0, SEEK_SET) < 0) {
+				fprintf(stderr, _("Could not fseek start of blob file."));
+				fprintf(stderr, "\n");
+				pxdoc->free(pxdoc, header);
+				PX_close(pxdoc);
+				PX_close_blob(pxblob);
+				fclose(outfp);
+				exit(1);
+			}
+			while((ret = pxblob->read(pxblob, pxblob->mb_stream, blocksize, block)) > 0) {
+				/* No need to decrypt because pxblob->read() does it for us */
+				if(blocksize != fwrite(block, 1, blocksize, outfp)) {
+					fprintf(stderr, _("Could not write block to output file."));
+					fprintf(stderr, "\n");
+					pxdoc->free(pxdoc, header);
+					PX_close(pxdoc);
+					PX_close_blob(pxblob);
+					fclose(outfp);
+					exit(1);
+				}
+			}
+			PX_close_blob(pxblob);
 		}
 	} else if(guess) {
 #define FIRSTCHAR 48
@@ -532,7 +647,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	fclose(outfp);
-	PX_close(pxdoc);
 	/* }}} */
 
 	/* Free resources and close files {{{
