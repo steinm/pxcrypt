@@ -7,6 +7,7 @@
 	mv index.html $@
 
 distclean: clean
+	rm -f Makefile
 
 clean:
 	rm -f ${man_MANS} ${man_HTMLS}
