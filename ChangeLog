@@ -1,2 +1,6 @@
+Version 0.0.2
+	- blob files can decrypted and encrypted if the associated database
+	  file is specified with the new program option --database-file.
+
 Version 0.0.1
 	- Initial version
